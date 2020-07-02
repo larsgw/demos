@@ -1,0 +1,135 @@
+<html>
+  <head>
+    <title>CSL-JSON to JSON-LD</title>
+    <meta charset="UTF-8">
+    <style>
+      body {
+        width: 100%:
+      }
+
+      form {
+        width: 50%;
+        float: left;
+      }
+
+      textarea {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <form>
+      CSL-JSON
+      <textarea cols="49" rows="30" id="ta">
+      </textarea>
+      <button id="ba" type="button">Convert</button>
+    </form>
+
+    <form>
+      CSL-JSON-LD
+      <textarea cols="49" rows="30" id="tb">
+      </textarea>
+      <!-- <button id="bb" type="button">Convert</button> -->
+    </form>
+
+    <script>
+      const data = [
+        {
+          id: '1',
+          type: 'article-journal',
+          title: 'Citation.js: a format-independent, modular bibliography tool for the browser and command line',
+          author: [{
+            given: 'Lars G',
+            family: 'Willighagen'
+          }],
+          issued: {
+            'date-parts': [
+              [2019, 8, 12]
+            ]
+          },
+          'container-title': 'PeerJ Computer Science',
+          volume: 5,
+          issue: 'e214',
+          DOI: '10.7717/peerj-cs.214',
+          URL: 'https://peerj.com/articles/cs-214/'
+        },
+        {
+          id: '2',
+          type: 'book',
+          title: 'Heukel\'s Flora van Nederland',
+          author: [{
+            given: 'Ruud',
+            'non-dropping-particle': 'van der',
+            family: 'Meijden'
+          }],
+          issued: {
+            'date-parts': [
+              [2005]
+            ]
+          },
+          edition: 23,
+          publisher: 'Noordhoff Uitgevers',
+          'publisher-place': 'Groningen/Houten, The Netherlands',
+          ISBN: '978 90 01 58344 6'
+        }
+      ]
+
+      ta.textContent = JSON.stringify(data, null, 2)
+
+      ba.onclick = function() {
+        const input = JSON.parse(ta.textContent)
+
+        const nodes = {
+          publisher: 0,
+          event: 0,
+          archive: 0,
+          container: 0,
+          collection: 0,
+          reviewed: 0,
+          original: 0,
+          translated: 0
+        }
+
+        const output = [{
+          '@id': '#bibliography',
+          items: []
+        }]
+
+        for (const item of [].concat(input)) {
+          output[0].items.push('#item-' + item.id)
+          output.push(...flatToLinked(item, nodes))
+        }
+
+        tb.textContent = JSON.stringify(output, null, 2)
+      }
+
+      function flatToLinked(flat, nodes) {
+        const linked = {
+          '@id': '#item-' + flat.id
+        }
+        const other = {}
+        for (const prop in flat) {
+          const parts = prop.split('-')
+
+          if (parts[0] in nodes) {
+            if (!(parts[0] in other)) {
+              const id = '#' + parts[0] + '-' + ++nodes[parts[0]]
+              other[parts[0]] = { '@id': id }
+              linked[parts[0]] = id
+            }
+
+            addToLinked(other[parts[0]], parts, flat[prop])
+          } else {
+            linked[prop] = flat[prop]
+          }
+        }
+        return [linked, ...Object.values(other)]
+      }
+
+      function addToLinked(node, parts, value) {
+        const prop = parts.length === 1 ? 'name' : parts.slice(1).join('-')
+        node[prop] = value
+      }
+    </script>
+  </body>
+</html>
